@@ -25,45 +25,42 @@ exports.getDefaultTriggers = async (req, res) => {
 };
 
 exports.getUserSnapshots = async (req, res) => {
-    const userid = req.params.id;
-    
-        var getSnapshotsSQL = `SELECT * FROM emotional_snapshot 
-                        WHERE emotional_snapshot.user_id = ?;`;
-        getSnapshotsSQL += `SELECT default_trigger.default_trigger_name FROM snapshot_default_trigger 
-                        INNER JOIN default_trigger ON
-                        snapshot_default_trigger.default_trigger_id = default_trigger.default_trigger_id;`;
-    
-    await conn.query(getSnapshotsSQL, userid).then(async (rows, err) => {
-      if (err) {
-        res.status(500);
+  const userid = req.params.userid;
+
+  var getSnapshotsSQL = `SELECT * FROM emotional_snapshot WHERE emotional_snapshot.user_id = ?;`;
+  getSnapshotsSQL += `SELECT default_trigger.default_trigger_name FROM snapshot_default_trigger INNER JOIN default_trigger ON snapshot_default_trigger.default_trigger_id = default_trigger.default_trigger_id;`;
+
+  await conn.query(getSnapshotsSQL, userid).then(async (rows, err) => {
+    if (err) {
+      res.status(500);
+      res.json({
+        status: "failure",
+        message: err,
+      });
+      return res;
+    } else {
+      if (rows.length > 0) {
+        res.status(200);
         res.json({
-          status: "failure",
-          message: err,
+          status: "success",
+          //message: `Records ID ${id} retrieved`,
+          result: rows,
         });
+        console.log(rows[0]);
+        //console.log(rows[1]);
         return res;
       } else {
-        if (rows.length > 0) {
-          res.status(200);
-          res.json({
-            status: "success",
-            //message: `Records ID ${id} retrieved`,
-            result: rows,
-          });
-          console.log(rows[0]);
-          //console.log(rows[1]);
-          return res;
-        } else {
-          res.status(404);
-          res.json({
-            status: "failure",
-            //message: `Invalid ID ${id}`,
-          });
-          return res;
-        }
+        res.status(404);
+        res.json({
+          status: "failure",
+          //message: `Invalid ID ${id}`,
+        });
+        return res;
       }
-    });
+    }
+  });
 
- /* const snapshotSQL = `SELECT * FROM emotional_snapshot 
+  /* const snapshotSQL = `SELECT * FROM emotional_snapshot 
                         WHERE emotional_snapshot.user_id = ?`;
 
   try {
@@ -143,7 +140,9 @@ exports.selectSnapshot = async (req, res) => {
   //const { isloggedin} = req.session;
   //console.log(`User logged in: ${isloggedin}`);
 
-  const { id } = req.params;
+  //TODO add validation to check snapshot id belongs to userid logged in, if not err
+
+  const { userid, id } = req.params;
   const vals = [id, id];
 
   var snapshotSQL = `SELECT * FROM emotional_snapshot WHERE emotional_snapshot.emotional_snapshot_id = ?;`;
@@ -203,25 +202,49 @@ exports.selectSnapshot = async (req, res) => {
 };
 
 exports.postNewSnapshot = async (req, res) => {
-  const userid = req.params.id;
-
-  const { new_details, new_date } = req.body;
-  const vals = [userid, new_details, new_date];
-
-  const insertSQL =
-    "INSERT INTO emotional_snapshot (user_id, notes, created_ts) VALUES (?, ?, ?)";
-
-  try {
-    const [newsnapshot, fields] = await conn.query(insertSQL, vals);
-    console.log(newsnapshot);
-    res.redirect("/");
-  } catch (err) {
-    console.log(err);
-  }
+  const userid = req.params.userid;
+  const new_details = req.body;
+  const vals = [
+    userid,
+    new_details.enjoyment_level,
+    new_details.sadness_level,
+    new_details.anger_level,
+    new_details.contempt_level,
+    new_details.disgust_level,
+    new_details.fear_level,
+    new_details.surprise_level,
+    new_details.notes,
+    new_details.snapshot_default_trigger_id,
+  ];
+//TODO validate the inputs
+  var insertSQL = `INSERT INTO emotional_snapshot (user_id, enjoyment_level, sadness_level, anger_level, contempt_level, disgust_level, fear_level, surprise_level, notes) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
+  insertSQL += `INSERT INTO snapshot_default_trigger (emotional_snapshot_id, default_trigger_id) VALUES (LAST_INSERT_ID(), ?);`;
+  
+  await conn.query(insertSQL, vals).then(async (rows, err) => {
+    if (err) {
+      res.status(500);
+      res.json({
+        status: "failure",
+        message: err,
+      });
+    } else {
+      res.status(201);
+      //tell the client where the created object can be retrieved from in header
+      res.set(
+        "Location",
+        `http://localhost:3002/user/${userid}/edit/${rows[0][0].insertId}`
+      );
+      res.json({
+        status: "success",
+        message: `Record ID ${rows[0][0].insertId} added`,
+      });
+    }
+  });
 };
 
 exports.updateSnapshot = async (req, res) => {
-  const snapshot_id = req.params.id;
+  const { userid, id } = req.params;
+  //const snapshot_id = req.params.id;
   const snapshot_notes = req.body.snapshot_notes;
   const default_trigger_name = req.body.snapshot_default_trigger;
   const vals1 = [snapshot_notes, snapshot_id];
@@ -230,6 +253,7 @@ exports.updateSnapshot = async (req, res) => {
 
   const updatesnapshotSQL =
     "UPDATE emotional_snapshot SET notes = ? WHERE emotional_snapshot_id = ?";
+  //insertSQL += `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = ?;`;
   const deletedefaulttriggerSQL = `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = ?`;
   const defaulttriggerSQL = `SELECT default_trigger.default_trigger_name FROM snapshot_default_trigger 
                         INNER JOIN default_trigger ON
@@ -281,11 +305,14 @@ exports.updateSnapshot = async (req, res) => {
 };
 
 exports.deleteSnapshot = async (req, res) => {
-  const snapshot_id = req.params.id;
+  const { userid, id } = req.params;
+  //const snapshot_id = req.params.id;
+
+  //add validation only delete if userid matches snapshotid owner
 
   const deleteSQL = `DELETE FROM emotional_snapshot WHERE emotional_snapshot_id = ?`;
 
-  await conn.query(deleteSQL, snapshot_id).then(async (rows, err) => {
+  await conn.query(deleteSQL, id).then(async (rows, err) => {
     if (err) {
       res.status(500);
       res.json({
@@ -293,19 +320,22 @@ exports.deleteSnapshot = async (req, res) => {
         error: "Internal Server Error",
         message: err,
       });
+      return res;
     } else {
-      if (rows.affectedRows > 0) {
+      if (rows[0].ResultSetHeader.affectedRows > 0) {
         res.status(200);
         res.json({
           status: "success",
-          message: `Record ID ${snapshot_id} deleted`,
+          message: `Record ID ${id} deleted`,
         });
+        return res;
       } else {
         res.status(404);
         res.json({
           status: "failure",
-          message: `Invalid ID ${snapshot_id}`,
+          message: `Invalid ID ${id}`,
         });
+        return res;
       }
     }
   });
