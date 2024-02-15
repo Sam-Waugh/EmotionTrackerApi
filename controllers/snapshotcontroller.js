@@ -202,9 +202,10 @@ exports.selectSnapshot = async (req, res) => {
 };
 
 exports.postNewSnapshot = async (req, res) => {
+  //try {
   const userid = req.params.userid;
   const new_details = req.body;
-  const vals = [
+  var vals = [
     userid,
     new_details.enjoyment_level,
     new_details.sadness_level,
@@ -214,12 +215,16 @@ exports.postNewSnapshot = async (req, res) => {
     new_details.fear_level,
     new_details.surprise_level,
     new_details.notes,
-    new_details.snapshot_default_trigger_id,
   ];
-//TODO validate the inputs
+  vals = vals.concat(new_details.snapshot_trigger_ids);
+
+  //TODO validate the inputs
   var insertSQL = `INSERT INTO emotional_snapshot (user_id, enjoyment_level, sadness_level, anger_level, contempt_level, disgust_level, fear_level, surprise_level, notes) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
-  insertSQL += `INSERT INTO snapshot_default_trigger (emotional_snapshot_id, default_trigger_id) VALUES (LAST_INSERT_ID(), ?);`;
-  
+  insertSQL += `SET @snapshot_id = LAST_INSERT_ID();`;
+  for (id in new_details.snapshot_trigger_ids) {
+    insertSQL +=
+      "INSERT INTO snapshot_default_trigger (emotional_snapshot_id, default_trigger_id) VALUES ( @snapshot_id , ?);";
+  }
   await conn.query(insertSQL, vals).then(async (rows, err) => {
     if (err) {
       res.status(500);
@@ -240,28 +245,65 @@ exports.postNewSnapshot = async (req, res) => {
       });
     }
   });
+  /*}.catch(error) {
+      //await conn.rollback;
+      res.status(400);
+      res.json({
+          status: "failure",
+          message: `Not recognised`,
+      });
+        };*/
 };
 
 exports.updateSnapshot = async (req, res) => {
+//TODO check if snapshot belongs to user
   const { userid, id } = req.params;
-  //const snapshot_id = req.params.id;
-  const snapshot_notes = req.body.snapshot_notes;
-  const default_trigger_name = req.body.snapshot_default_trigger;
-  const vals1 = [snapshot_notes, snapshot_id];
-  //const default_trigger_name = req.body.default_trigger_name;
-  //const vals2 = [snapshot_id, snapshot_default_triggers.default_trigger_id ];
+  const new_details = req.body;
+  var vals = [
+    id,
+    new_details.notes,
+  ];
+  vals = vals.concat(new_details.snapshot_trigger_ids);
 
-  const updatesnapshotSQL =
-    "UPDATE emotional_snapshot SET notes = ? WHERE emotional_snapshot_id = ?";
-  //insertSQL += `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = ?;`;
-  const deletedefaulttriggerSQL = `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = ?`;
-  const defaulttriggerSQL = `SELECT default_trigger.default_trigger_name FROM snapshot_default_trigger 
-                        INNER JOIN default_trigger ON
-                        snapshot_default_trigger.default_trigger_id = default_trigger.default_trigger_id`;
-  //const defaulttriggeridSQL = `SELECT default_trigger_id FROM default_trigger
-  //                    WHERE default_trigger_name = ?`;
-  const updatedefaulttriggerSQL = `INSERT INTO snapshot_default_trigger (emotional_snapshot_id, default_trigger_id) VALUES (?, ?)`;
-
+    var updatesnapshotSQL = `SET @snapshot_id = ?;`;
+    updatesnapshotSQL +=
+      "UPDATE emotional_snapshot SET notes = ? WHERE emotional_snapshot_id = @snapshot_id; ";
+    updatesnapshotSQL += `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = @snapshot_id ;`;
+    for (trigger_id in new_details.snapshot_trigger_ids) {
+      updatesnapshotSQL +=
+        "INSERT INTO snapshot_default_trigger (emotional_snapshot_id, default_trigger_id) VALUES ( @snapshot_id , ?);";
+    }
+  
+    await conn.query(updatesnapshotSQL, vals).then(async (rows, err) => {
+      if (err) {
+        res.status(500);
+        res.json({
+          status: "failure",
+          message: err,
+        });
+      } else {
+        res.status(201);
+        //tell the client where the created object can be retrieved from in header
+        res.set(
+          "Location",
+          `http://localhost:3002/user/${userid}/edit/${id}`
+        );
+        res.json({
+          status: "success",
+          message: `Record ID ${id} updated`,
+        });
+      }
+    });
+  /*}.catch(error) {
+      //await conn.rollback;
+      res.status(400);
+      res.json({
+          status: "failure",
+          message: `Not recognised`,
+      });
+        };*/
+};
+/*
   try {
     const [updatedsnapshot, fielddata1] = await conn.query(
       updatesnapshotSQL,
@@ -303,6 +345,7 @@ exports.updateSnapshot = async (req, res) => {
     console.log(err);
   }
 };
+*/
 
 exports.deleteSnapshot = async (req, res) => {
   const { userid, id } = req.params;

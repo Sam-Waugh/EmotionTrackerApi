@@ -9,7 +9,7 @@ router.get("/user/:userid/edit/:id", controller.selectSnapshot);
 
 
 router.post("/user/:userid/new", controller.postNewSnapshot);
-router.post("/user/:userid/edit/:id", controller.updateSnapshot);
+router.put("/user/:userid/edit/:id", controller.updateSnapshot);
 router.delete("/user/:userid/del/:id", controller.deleteSnapshot);
 
 router.get("/user/:userid/snapshots", controller.getUserSnapshots);
