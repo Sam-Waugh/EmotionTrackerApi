@@ -27,6 +27,11 @@ exports.getDefaultTriggers = async (req, res) => {
 exports.getUserSnapshots = async (req, res) => {
   const userid = req.params.userid;
 
+    var exampleSQL = "SELECT emotional_snapshot.*, GROUP_CONCAT(snapshot_default_trigger.default_trigger_id SEPARATOR ',') AS default_trigger_ids FROM emotional_snapshot \
+JOIN snapshot_default_trigger on emotional_snapshot.emotional_snapshot_id = snapshot_default_trigger.emotional_snapshot_id \
+WHERE emotional_snapshot.user_id = 1 \
+GROUP BY emotional_snapshot.user_id, emotional_snapshot_id"
+    
   var getSnapshotsSQL = `SELECT * FROM emotional_snapshot WHERE emotional_snapshot.user_id = ?;`;
   getSnapshotsSQL += `SELECT default_trigger.default_trigger_name FROM snapshot_default_trigger INNER JOIN default_trigger ON snapshot_default_trigger.default_trigger_id = default_trigger.default_trigger_id;`;
 
