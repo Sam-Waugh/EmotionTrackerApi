@@ -8,33 +8,57 @@ async function getTriggerByName(name) {
 }
 
 exports.getDefaultTriggers = async (req, res) => {
-  const userid = req.params.id;
+    //const userid = req.params.id;
 
-  const defaulttriggerSQL = `SELECT default_trigger_id, default_trigger_name FROM default_trigger`;
+    const defaulttriggerSQL = `SELECT default_trigger_id, default_trigger_name FROM default_trigger`;
 
-  try {
-    const [default_triggers, fielddata2] = await conn.query(defaulttriggerSQL);
-    res.status(200);
-    res.json(default_triggers);
-    return res;
-  } catch (err) {
-    res.status(500);
-    res.json({ error: "Internal Server Error" });
-    return res;
-  }
+    /*try {
+      const [default_triggers, fielddata2] = await conn.query(defaulttriggerSQL);
+      res.status(200);
+      res.json(default_triggers);
+      return res;
+    } catch (err) {
+      res.status(500);
+      res.json({ error: "Internal Server Error" });
+      return res;
+      }*/
+    await conn.query(defaulttriggerSQL).then(async (rows, err) => {
+        if (err) {
+            res.status(500);
+            res.json({
+                status: "failure",
+                message: err,
+            });
+            return res;
+        } else {
+            if (rows.length > 0) {
+                res.status(200);
+                res.json({
+                    status: "success",
+                    //message: `Records ID ${id} retrieved`,
+                    result: rows[0],
+                });
+                return res;
+            } else {
+                res.status(404);
+                res.json({
+                    status: "failure",
+                    //message: `Invalid ID ${id}`,
+                });
+                return res;
+            }
+        }
+    })
 };
 
 exports.getUserSnapshots = async (req, res) => {
-  const userid = req.params.userid;
-
-    var exampleSQL = "SELECT emotional_snapshot.*, GROUP_CONCAT(snapshot_default_trigger.default_trigger_id SEPARATOR ',') AS default_trigger_ids FROM emotional_snapshot \
-JOIN snapshot_default_trigger on emotional_snapshot.emotional_snapshot_id = snapshot_default_trigger.emotional_snapshot_id \
-WHERE emotional_snapshot.user_id = 1 \
-GROUP BY emotional_snapshot.user_id, emotional_snapshot_id"
+   const { userid } = req.params;
+  
+    var getSnapshotsSQL = "SELECT emotional_snapshot.*, GROUP_CONCAT(snapshot_default_trigger.default_trigger_id SEPARATOR ',') AS default_trigger_ids FROM emotional_snapshot \
+        JOIN snapshot_default_trigger on emotional_snapshot.emotional_snapshot_id = snapshot_default_trigger.emotional_snapshot_id \
+        WHERE emotional_snapshot.user_id = ? \
+        GROUP BY emotional_snapshot.user_id, emotional_snapshot_id";
     
-  var getSnapshotsSQL = `SELECT * FROM emotional_snapshot WHERE emotional_snapshot.user_id = ?;`;
-  getSnapshotsSQL += `SELECT default_trigger.default_trigger_name FROM snapshot_default_trigger INNER JOIN default_trigger ON snapshot_default_trigger.default_trigger_id = default_trigger.default_trigger_id;`;
-
   await conn.query(getSnapshotsSQL, userid).then(async (rows, err) => {
     if (err) {
       res.status(500);
@@ -44,15 +68,17 @@ GROUP BY emotional_snapshot.user_id, emotional_snapshot_id"
       });
       return res;
     } else {
-      if (rows.length > 0) {
-        res.status(200);
+        if (rows.length > 0) {
+            res.status(200);
+            var result = rows[0]
+            result.forEach((snapshot) => {
+                snapshot.default_trigger_ids = snapshot.default_trigger_ids.split(',').map(Number);
+            })
         res.json({
           status: "success",
           //message: `Records ID ${id} retrieved`,
-          result: rows,
+          result: result,
         });
-        console.log(rows[0]);
-        //console.log(rows[1]);
         return res;
       } else {
         res.status(404);
@@ -69,7 +95,6 @@ GROUP BY emotional_snapshot.user_id, emotional_snapshot_id"
                         WHERE emotional_snapshot.user_id = ?`;
 
   try {
-    const [snapshotdetails, fielddata2] = await conn.query(snapshotSQL, userid);
     res.status(200);
     res.json(snapshotdetails);
   } catch (err) {
