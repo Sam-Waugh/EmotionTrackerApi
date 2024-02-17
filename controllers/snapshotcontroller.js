@@ -176,21 +176,22 @@ exports.postNewSnapshot = async (req, res) => {
   const new_details = req.body;
   var vals = [
     userid,
-    new_details.enjoyment_level,
-    new_details.sadness_level,
-    new_details.anger_level,
-    new_details.contempt_level,
-    new_details.disgust_level,
-    new_details.fear_level,
-    new_details.surprise_level,
-    new_details.notes,
+    new_details.snapshot_enjoyment,
+    new_details.snapshot_sadness,
+    new_details.snapshot_anger,
+    new_details.snapshot_contempt,
+    new_details.snapshot_disgust,
+    new_details.snapshot_fear,
+    new_details.snapshot_surprise,
+    new_details.snapshot_notes,
   ];
-  vals = vals.concat(new_details.snapshot_trigger_ids);
+  var snapshot_trigger_ids = new_details.snapshot_trigger_ids.map(Number);
+  vals = vals.concat(snapshot_trigger_ids);
 
   //TODO validate the inputs
   var insertSQL = `INSERT INTO emotional_snapshot (user_id, enjoyment_level, sadness_level, anger_level, contempt_level, disgust_level, fear_level, surprise_level, notes) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
   insertSQL += `SET @snapshot_id = LAST_INSERT_ID();`;
-  for (id in new_details.snapshot_trigger_ids) {
+  for (id in snapshot_trigger_ids) {
     insertSQL +=
       "INSERT INTO snapshot_default_trigger (emotional_snapshot_id, default_trigger_id) VALUES ( @snapshot_id , ?);";
   }
@@ -211,6 +212,7 @@ exports.postNewSnapshot = async (req, res) => {
       res.json({
         status: "success",
         message: `Record ID ${rows[0][0].insertId} added`,
+        snapshot_id: rows[0][0].insertId
       });
     }
   });
@@ -228,14 +230,17 @@ exports.updateSnapshot = async (req, res) => {
   //TODO check if snapshot belongs to user
   const { userid, id } = req.params;
   const new_details = req.body;
-  var vals = [id, new_details.notes];
-  vals = vals.concat(new_details.snapshot_trigger_ids);
+  var vals = [id, new_details[0].snapshot_notes];
+  var snapshot_trigger_ids = new_details[0].snapshot_trigger_ids
+            .map(Number);            
+  vals = vals.concat(snapshot_trigger_ids);
 
+    
   var updatesnapshotSQL = `SET @snapshot_id = ?;`;
   updatesnapshotSQL +=
     "UPDATE emotional_snapshot SET notes = ? WHERE emotional_snapshot_id = @snapshot_id; ";
   updatesnapshotSQL += `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = @snapshot_id ;`;
-  for (trigger_id in new_details.snapshot_trigger_ids) {
+  for (trigger_id in snapshot_trigger_ids) {
     updatesnapshotSQL +=
       "INSERT INTO snapshot_default_trigger (emotional_snapshot_id, default_trigger_id) VALUES ( @snapshot_id , ?);";
   }
