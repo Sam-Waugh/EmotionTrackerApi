@@ -56,7 +56,7 @@ exports.getUserSnapshots = async (req, res) => {
 
   var getSnapshotsSQL =
     "SELECT emotional_snapshot.*, GROUP_CONCAT(snapshot_default_trigger.default_trigger_id SEPARATOR ',') AS default_trigger_ids FROM emotional_snapshot \
-        JOIN snapshot_default_trigger on emotional_snapshot.emotional_snapshot_id = snapshot_default_trigger.emotional_snapshot_id \
+        LEFT JOIN snapshot_default_trigger ON emotional_snapshot.emotional_snapshot_id = snapshot_default_trigger.emotional_snapshot_id \
         WHERE emotional_snapshot.user_id = ? \
         GROUP BY emotional_snapshot.user_id, emotional_snapshot_id";
 
@@ -73,9 +73,12 @@ exports.getUserSnapshots = async (req, res) => {
         res.status(200);
         var result = rows[0];
         result.forEach((snapshot) => {
-          snapshot.default_trigger_ids = snapshot.default_trigger_ids
-            .split(",")
-            .map(Number);
+          if (snapshot.default_trigger_ids === null) {
+          } else {
+            snapshot.default_trigger_ids = snapshot.default_trigger_ids
+              .split(",")
+              .map(Number);
+          }
         });
         res.json({
           status: "success",
@@ -110,7 +113,7 @@ exports.selectSnapshot = async (req, res) => {
 
   var getSnapshotSQL =
     "SELECT emotional_snapshot.*, GROUP_CONCAT(snapshot_default_trigger.default_trigger_id SEPARATOR ',') AS default_trigger_ids FROM emotional_snapshot \
-        JOIN snapshot_default_trigger on emotional_snapshot.emotional_snapshot_id = snapshot_default_trigger.emotional_snapshot_id \
+        LEFT JOIN snapshot_default_trigger on emotional_snapshot.emotional_snapshot_id = snapshot_default_trigger.emotional_snapshot_id \
         WHERE emotional_snapshot.user_id = ? AND emotional_snapshot.emotional_snapshot_id = ? \
         GROUP BY emotional_snapshot.user_id, emotional_snapshot_id";
 
@@ -127,9 +130,12 @@ exports.selectSnapshot = async (req, res) => {
         res.status(200);
         var result = rows[0];
         result.forEach((snapshot) => {
-          snapshot.default_trigger_ids = snapshot.default_trigger_ids
-            .split(",")
-            .map(Number);
+          if (snapshot.default_trigger_ids === null) {
+          } else {
+            snapshot.default_trigger_ids = snapshot.default_trigger_ids
+              .split(",")
+              .map(Number);
+          }
         });
         res.json({
           status: "success",
@@ -185,8 +191,14 @@ exports.postNewSnapshot = async (req, res) => {
     new_details.snapshot_surprise,
     new_details.snapshot_notes,
   ];
-  var snapshot_trigger_ids = new_details.snapshot_trigger_ids.map(Number);
-  vals = vals.concat(snapshot_trigger_ids);
+  if (!new_details.snapshot_trigger_ids) {
+  } else {
+    var snapshot_trigger_ids = Array.isArray(
+      new_details.snapshot_trigger_ids)
+      ? new_details.snapshot_trigger_ids.map(Number)
+      : [Number(new_details.snapshot_trigger_ids)];
+    vals = vals.concat(snapshot_trigger_ids);
+  }
 
   //TODO validate the inputs
   var insertSQL = `INSERT INTO emotional_snapshot (user_id, enjoyment_level, sadness_level, anger_level, contempt_level, disgust_level, fear_level, surprise_level, notes) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
@@ -231,14 +243,19 @@ exports.updateSnapshot = async (req, res) => {
   const { userid, id } = req.params;
   const new_details = req.body;
   var vals = [id, new_details[0].snapshot_notes];
-  var snapshot_trigger_ids = new_details[0].snapshot_trigger_ids
-            .map(Number);            
-  vals = vals.concat(snapshot_trigger_ids);
+  if (!new_details[0].snapshot_trigger_ids) {
+  } else {
+    var snapshot_trigger_ids = Array.isArray(
+      new_details[0].snapshot_trigger_ids)
+      ? new_details[0].snapshot_trigger_ids.map(Number)
+      : [Number(new_details[0].snapshot_trigger_ids)]; ;
+    vals = vals.concat(snapshot_trigger_ids);
+  }
 
     
   var updatesnapshotSQL = `SET @snapshot_id = ?;`;
   updatesnapshotSQL +=
-    "UPDATE emotional_snapshot SET notes = ? WHERE emotional_snapshot_id = @snapshot_id; ";
+    "UPDATE emotional_snapshot SET notes = ?, modified_ts = CURRENT_TIMESTAMP() WHERE emotional_snapshot_id = @snapshot_id; ";
   updatesnapshotSQL += `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = @snapshot_id ;`;
   for (trigger_id in snapshot_trigger_ids) {
     updatesnapshotSQL +=
@@ -317,13 +334,14 @@ exports.updateSnapshot = async (req, res) => {
 
 exports.deleteSnapshot = async (req, res) => {
   const { userid, id } = req.params;
-  //const snapshot_id = req.params.id;
+  vals = [id, id];
 
   //add validation only delete if userid matches snapshotid owner
 
-  const deleteSQL = `DELETE FROM emotional_snapshot WHERE emotional_snapshot_id = ?`;
+  var deleteSQL = `DELETE FROM emotional_snapshot WHERE emotional_snapshot_id = ?;`;
+  deleteSQL += `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = ? ;`;
 
-  await conn.query(deleteSQL, id).then(async (rows, err) => {
+  await conn.query(deleteSQL, vals).then(async (rows, err) => {
     if (err) {
       res.status(500);
       res.json({
@@ -333,7 +351,7 @@ exports.deleteSnapshot = async (req, res) => {
       });
       return res;
     } else {
-      if (rows[0].ResultSetHeader.affectedRows > 0) {
+      if (rows[0][0].affectedRows > 0) {
         res.status(200);
         res.json({
           status: "success",
