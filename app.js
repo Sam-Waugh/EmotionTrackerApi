@@ -4,6 +4,7 @@ const dotenv = require("dotenv").config({ path: "./config.env" });
 const session = require("express-session");
 const snapshotrouter = require("./routes/snapshotroutes");
 const userrouter = require("./routes/userroutes");
+const apiuserrouter = require("./routes/apiuserroutes");
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(express.json());
 
 app.use("/", snapshotrouter);
 app.use("/", userrouter);
+app.use("/", apiuserrouter);
 
 app.listen(process.env.PORT, (err) => {
   if (err) return console.log(err);

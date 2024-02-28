@@ -7,6 +7,7 @@ async function getTriggerByName(name) {
   return rows[0];
 }
 
+
 exports.getDefaultTriggers = async (req, res) => {
   //const userid = req.params.id;
 

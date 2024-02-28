@@ -1,23 +1,11 @@
 const conn = require("../utils/db");
 const auth = require("../utils/auth");
+const { bcryptPassword, compareHashPassword } = require("../utils/bcrypt");
 //const generateAccessToken = require("./generateAccessToken")
 //import the generateAccessToken function
 
-const bcrypt = require("bcrypt");
+// const bcrypt = require("bcrypt");
 const saltRounds = 10;
-
-async function compareHashPassword(password, hash) {
-  const isSame = await bcrypt.compare(password, hash);
-  console.log((password, hash));
-  console.log(isSame);
-  return isSame;
-}
-
-async function bcryptPassword(password, saltRounds) {
-  const hash = await bcrypt.hash(password, saltRounds);
-  console.log(hash);
-  return hash;
-}
 
 /* async function getSavedHashPassword(username) {
   let getsaltedhashpassSQL = `SELECT password_saltedhash FROM user WHERE username = ?`;
@@ -168,13 +156,12 @@ exports.postRegister = async (req, res) => {
     new_details.email,
     new_details.name,
     new_details.dob,
-    new_details.telephoneno,
     new_details.gender,
   ];
   console.log(encryptedpassword);
 
   const userinsertSQL =
-    "INSERT INTO user (username, password_saltedhash, email, name, date_of_birth, telephone_no, gender) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    "INSERT INTO user (username, password_saltedhash, email, name, date_of_birth, gender) VALUES (?, ?, ?, ?, ?, ?)";
   
   await conn.query(userinsertSQL, vals).then(async (rows, err) => {
     if (err) {

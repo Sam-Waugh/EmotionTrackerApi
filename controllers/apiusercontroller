@@ -1,0 +1,77 @@
+const conn = require("../utils/db");
+const auth = require("../utils/auth");
+const API = require("../utils/apiAuth");
+const { genAPIKey } = require("../utils/apiAuth");
+const saltRounds = 10;
+const { bcryptPassword, compareHashPassword } = require("../utils/bcrypt");
+
+exports.postApiRegister = async (req, res) => {
+  //create a new with "apiuser:ApiUsername"
+  const apiUsername = req.body.apiusername;
+  const today = new Date().toISOString().split("T")[0];
+
+  const api_key = genAPIKey();
+  const apiUser = {
+    apiUsername: apiUsername,
+    signature: await bcryptPassword(api_key, saltRounds),
+    usage: [{ date: today, count: 0 }],
+  };
+  const vals = [apiUser.apiUsername, api_key];
+  console.log(apiUser.signature);
+
+  const apiuserinsertSQL =
+    "INSERT INTO api_user (apiusername, apikey) VALUES (?, ?)";
+
+  await conn.query(apiuserinsertSQL, vals).then(async (rows, err) => {
+    if (err) {
+      res.status(500);
+      res.json({
+        status: "failure",
+        message: err,
+      });
+    } else {
+      res.status(201).send({
+        data: apiUser,
+        status: "success",
+        message: `Record ID ${rows[0].insertId} added`,
+      });
+    }
+  });
+};
+
+exports.authenticateApiKey = async (req, res, next) => {
+  const MAX = 50000;
+  const apiuserid = req.header("x-api-userid");
+  const api_keyhash = req.header("x-api-key"); //Add API key to headers
+
+  const getapikeySQL = "SELECT apikey FROM api_user WHERE apiuser_id = ?";
+
+  await conn.query(getapikeySQL, apiuserid).then(async (rows, err) => {
+    if (err) {
+      res.status(500);
+      res.json({
+        status: "failure",
+        message: err,
+      });
+      return res;
+    } else {
+      const apikeybcryptmatch = await compareHashPassword(
+        rows[0][0].apikey,
+        api_keyhash
+      );
+      if (apikeybcryptmatch) {
+        // res.json({ id: apiuserid });
+        //res.status(200);
+        //If API key matches
+        next();
+      } else {
+        //Reject request if API key doesn't match
+        res.status(401);
+        res.json({
+          status: "failure",
+          message: `Invalid user credentials`,
+        });
+      }
+    }
+  });
+};
