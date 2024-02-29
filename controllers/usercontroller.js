@@ -168,7 +168,10 @@ exports.postRegister = async (req, res) => {
       res.status(500);
       res.json({
         status: "failure",
-        message: err,
+        message:
+          err.code == "ER_DUP_ENTRY" || err.errno == 1062
+            ? "Username already exists!"
+            : "Unknown error",
       });
 
       //401 err?
@@ -179,5 +182,20 @@ exports.postRegister = async (req, res) => {
         message: `Record ID ${rows[0].insertId} added`,
       });
     }
-  });
+  }).catch(err => {
+    if (err.code == "ER_DUP_ENTRY" || err.errno == 1062) {
+      res.status(409)
+      res.json({
+        message: "Username already exists!",
+      });
+      return
+
+    }
+    res.status(500);
+    res.json({
+      status: "failure",
+      message: err
+    });
+    console.log(err);
+  })
 };
