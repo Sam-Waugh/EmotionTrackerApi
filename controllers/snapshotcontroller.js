@@ -1,28 +1,9 @@
 const conn = require("../utils/db");
 
-async function getTriggerByName(name) {
-  let sql = `SELECT default_trigger_id FROM default_trigger 
-                    WHERE default_trigger_name = ?`;
-  const [rows, fields] = await conn.query(sql, [name]);
-  return rows[0];
-}
-
-
 exports.getDefaultTriggers = async (req, res) => {
-  //const userid = req.params.id;
 
   const defaulttriggerSQL = `SELECT default_trigger_id, default_trigger_name FROM default_trigger`;
 
-  /*try {
-      const [default_triggers, fielddata2] = await conn.query(defaulttriggerSQL);
-      res.status(200);
-      res.json(default_triggers);
-      return res;
-    } catch (err) {
-      res.status(500);
-      res.json({ error: "Internal Server Error" });
-      return res;
-      }*/
   await conn.query(defaulttriggerSQL).then(async (rows, err) => {
     if (err) {
       res.status(500);
@@ -36,7 +17,6 @@ exports.getDefaultTriggers = async (req, res) => {
         res.status(200);
         res.json({
           status: "success",
-          //message: `Records ID ${id} retrieved`,
           result: rows[0],
         });
         return res;
@@ -44,7 +24,6 @@ exports.getDefaultTriggers = async (req, res) => {
         res.status(404);
         res.json({
           status: "failure",
-          //message: `Invalid ID ${id}`,
         });
         return res;
       }
@@ -83,7 +62,6 @@ exports.getUserSnapshots = async (req, res) => {
         });
         res.json({
           status: "success",
-          //message: `Records ID ${id} retrieved`,
           result: result,
         });
         return res;
@@ -91,7 +69,6 @@ exports.getUserSnapshots = async (req, res) => {
         res.status(404);
         res.json({
           status: "failure",
-          //message: `Invalid ID ${id}`,
         });
         return res;
       }
@@ -104,13 +81,6 @@ exports.selectSnapshot = async (req, res) => {
 
   const { userid, id } = req.params;
   const vals = [userid, id];
-
-  /* var snapshotSQL = `SELECT * FROM emotional_snapshot WHERE emotional_snapshot.emotional_snapshot_id = ?;`;
-  snapshotSQL += `SELECT default_trigger.default_trigger_name, default_trigger.default_trigger_id FROM snapshot_default_trigger 
-                        INNER JOIN default_trigger ON
-                        snapshot_default_trigger.default_trigger_id = default_trigger.default_trigger_id
-                        WHERE emotional_snapshot_id = ?;`;
-                */
 
   var getSnapshotSQL =
     "SELECT emotional_snapshot.*, GROUP_CONCAT(snapshot_default_trigger.default_trigger_id SEPARATOR ',') AS default_trigger_ids FROM emotional_snapshot \
@@ -144,7 +114,6 @@ exports.selectSnapshot = async (req, res) => {
           result: result,
         });
         console.log(rows[0]);
-        //console.log(rows[1]);
         return res;
       } else {
         res.status(404);
@@ -156,25 +125,6 @@ exports.selectSnapshot = async (req, res) => {
       }
     }
   });
-
-  /*try {
-                        
-            const [snapshotdetails, fielddata1] = await conn.query(snapshotSQL, vals);
-            const [defaulttriggerdetails, fielddata2] = await conn.query(defaulttriggerSQL, vals);
-
-            $f3=>set('defaulttriggerdetails',json_encode($defaulttriggerdetails));
-
-            res.render("editsnapshot", {
-              loggedin: isloggedin,
-              snapshot: snapshotdetails,
-              defaulttriggers: defaulttriggerdetails,
-            });
-        } catch (err) {
-            console.log(err);
-        }
-    } else {
-        res.redirect('/');
-    }*/
 };
 
 exports.postNewSnapshot = async (req, res) => {
@@ -229,14 +179,6 @@ exports.postNewSnapshot = async (req, res) => {
       });
     }
   });
-  /*}.catch(error) {
-      //await conn.rollback;
-      res.status(400);
-      res.json({
-          status: "failure",
-          message: `Not recognised`,
-      });
-        };*/
 };
 
 exports.updateSnapshot = async (req, res) => {
@@ -280,63 +222,11 @@ exports.updateSnapshot = async (req, res) => {
       });
     }
   });
-  /*}.catch(error) {
-      //await conn.rollback;
-      res.status(400);
-      res.json({
-          status: "failure",
-          message: `Not recognised`,
-      });
-        };*/
 };
-/*
-  try {
-    const [updatedsnapshot, fielddata1] = await conn.query(
-      updatesnapshotSQL,
-      vals1
-    );
-    const [deleteddefaulttrigger, fielddata2] = await conn.query(
-      deletedefaulttriggerSQL,
-      snapshot_id
-    );
-    const [defaulttriggerdetails, fielddata3] = await conn.query(
-      defaulttriggerSQL
-    );
-    //const [defaulttriggerid] = await conn.query(defaulttriggeridSQL, default_trigger_name);
-
-    ///const default_trigger_id = (async () => {console.log(await getTriggerByName(default_trigger_name))})()
-    const default_trigger = await getTriggerByName(default_trigger_name);
-
-    console.log(default_trigger);
-    //default_trigger_id = default_trigger_info[0].default_trigger_id;
-    const default_trigger_details = {
-      default_trigger: default_trigger,
-      default_trigger_name: default_trigger_name,
-    };
-    console.log(default_trigger_details);
-
-    const [updateddefaulttrigger, fielddata4] = await conn.query(
-      updatedefaulttriggerSQL,
-      [snapshot_id, default_trigger.default_trigger_id]
-    );
-
-    console.log(updatedsnapshot);
-    console.log(updateddefaulttrigger);
-    console.log(deleteddefaulttrigger);
-    console.log(defaulttriggerdetails);
-    console.log(default_trigger);
-
-    res.redirect("/");
-  } catch (err) {
-    console.log(err);
-  }
-};
-*/
 
 exports.deleteSnapshot = async (req, res) => {
   const { userid, id } = req.params;
   vals = [id, id];
-
   //add validation only delete if userid matches snapshotid owner
 
   var deleteSQL = `DELETE FROM emotional_snapshot WHERE emotional_snapshot_id = ?;`;

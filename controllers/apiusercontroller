@@ -60,8 +60,6 @@ exports.authenticateApiKey = async (req, res, next) => {
         api_keyhash
       );
       if (apikeybcryptmatch) {
-        // res.json({ id: apiuserid });
-        //res.status(200);
         //If API key matches
         next();
       } else {
