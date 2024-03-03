@@ -41,8 +41,9 @@ exports.postApiRegister = async (req, res) => {
 
 exports.authenticateApiKey = async (req, res, next) => {
   const MAX = 50000;
+  //Add API key to headers
   const apiuserid = req.header("x-api-userid");
-  const api_keyhash = req.header("x-api-key"); //Add API key to headers
+  const api_keyhash = req.header("x-api-key");
 
   const getapikeySQL = "SELECT apikey FROM api_user WHERE apiuser_id = ?";
 

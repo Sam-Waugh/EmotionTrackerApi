@@ -50,7 +50,6 @@ exports.postLogin = async (req, res) => {
 };
 
 exports.postRegister = async (req, res) => {
-  //add check no current user with that email
   const new_details = req.body;
   const plain_password = new_details.userpass;
   const encryptedpassword = await bcryptPassword(plain_password, saltRounds);

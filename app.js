@@ -8,18 +8,9 @@ const apiuserrouter = require("./routes/apiuserroutes");
 
 const app = express();
 
-//
 app.use(morgan("tiny"));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-
-// app.use(
-//   session({
-//     secret: "mysecretstring1234",
-//     resave: false,
-//     saveUninitialized: false,
-//   })
-// );
 
 app.use("/", snapshotrouter);
 app.use("/", userrouter);

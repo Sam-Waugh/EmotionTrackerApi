@@ -77,7 +77,6 @@ exports.getUserSnapshots = async (req, res) => {
 };
 
 exports.selectSnapshot = async (req, res) => {
-  //TODO add validation to check snapshot id belongs to userid logged in, if not err
 
   const { userid, id } = req.params;
   const vals = [userid, id];
@@ -128,7 +127,6 @@ exports.selectSnapshot = async (req, res) => {
 };
 
 exports.postNewSnapshot = async (req, res) => {
-  //try {
   const userid = req.params.userid;
   const new_details = req.body;
   var vals = [
@@ -151,7 +149,6 @@ exports.postNewSnapshot = async (req, res) => {
     vals = vals.concat(snapshot_trigger_ids);
   }
 
-  //TODO validate the inputs
   var insertSQL = `INSERT INTO emotional_snapshot (user_id, enjoyment_level, sadness_level, anger_level, contempt_level, disgust_level, fear_level, surprise_level, notes) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
   insertSQL += `SET @snapshot_id = LAST_INSERT_ID();`;
   for (id in snapshot_trigger_ids) {
@@ -194,7 +191,6 @@ exports.updateSnapshot = async (req, res) => {
       : [Number(new_details[0].snapshot_trigger_ids)]; ;
     vals = vals.concat(snapshot_trigger_ids);
   }
-
     
   var updatesnapshotSQL = `SET @snapshot_id = ?;`;
   updatesnapshotSQL +=
@@ -227,7 +223,6 @@ exports.updateSnapshot = async (req, res) => {
 exports.deleteSnapshot = async (req, res) => {
   const { userid, id } = req.params;
   vals = [id, id];
-  //add validation only delete if userid matches snapshotid owner
 
   var deleteSQL = `DELETE FROM emotional_snapshot WHERE emotional_snapshot_id = ?;`;
   deleteSQL += `DELETE FROM snapshot_default_trigger WHERE emotional_snapshot_id = ? ;`;
