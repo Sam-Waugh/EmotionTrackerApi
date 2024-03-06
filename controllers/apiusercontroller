@@ -1,5 +1,4 @@
 const conn = require("../utils/db");
-const auth = require("../utils/auth");
 const API = require("../utils/apiAuth");
 const { genAPIKey } = require("../utils/apiAuth");
 const saltRounds = 10;
@@ -8,13 +7,11 @@ const { bcryptPassword, compareHashPassword } = require("../utils/bcrypt");
 exports.postApiRegister = async (req, res) => {
   //create a new with "apiuser:ApiUsername"
   const apiUsername = req.body.apiusername;
-  const today = new Date().toISOString().split("T")[0];
 
   const api_key = genAPIKey();
   const apiUser = {
     apiUsername: apiUsername,
     signature: await bcryptPassword(api_key, saltRounds),
-    usage: [{ date: today, count: 0 }],
   };
   const vals = [apiUser.apiUsername, api_key];
   console.log(apiUser.signature);
@@ -40,8 +37,7 @@ exports.postApiRegister = async (req, res) => {
 };
 
 exports.authenticateApiKey = async (req, res, next) => {
-  const MAX = 50000;
-  //Add API key to headers
+  //Get API key from headers
   const apiuserid = req.header("x-api-userid");
   const api_keyhash = req.header("x-api-key");
 

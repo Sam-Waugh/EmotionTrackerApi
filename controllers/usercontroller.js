@@ -1,5 +1,4 @@
 const conn = require("../utils/db");
-const auth = require("../utils/auth");
 const { bcryptPassword, compareHashPassword } = require("../utils/bcrypt");
 const saltRounds = 10;
 
